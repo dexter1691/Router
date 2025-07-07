@@ -3,5 +3,21 @@ name = "router"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = []
+requires-python = "==3.10"
+dependencies = [
+    "ipykernel>=6.29.5",
+    "jupyterlab>=4.4.4",
+    "matplotlib>=3.10.3",
+    "mlx-embeddings>=0.0.3",
+    "ollama>=0.5.1",
+    "pandas>=2.3.0",
+    "python-dotenv>=1.1.1",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["router*"]
