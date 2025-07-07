@@ -13,7 +13,7 @@ lm = dspy.LM('openai/gpt-4.1', api_key=openai.api_key)
 dspy.configure(lm=lm)
 print(openai.api_key)
 
-with open("../data/tools.json", "r") as f:
+with open("data/tools.json", "r") as f:
     tools = json.load(f)
 
 tools_flat_list = []
@@ -31,8 +31,8 @@ class Tools(BaseModel):
     tool_descriptions: list[str]
 
 class Integration(dspy.Signature):
-    tools: Tools = dspy.InputField(description='The tools that the integration provides along with their descriptions')
-    integration_description: str = dspy.OutputField(description='The description of the integration and the functionality that is supported by the integration.')
+    tools: Tools = dspy.InputField(description='The tool along with their descriptions')
+    tool_descriptions: str = dspy.OutputField(description='Summary description of the tool and all its functionality as a paragraph.')
 
 generate_integration = dspy.ChainOfThought(Integration)    
 
@@ -51,11 +51,11 @@ print(tools_pydantic_list)
 integration_descriptions = {}
 for tool in tools_pydantic_list:
     result = generate_integration(tools=tool)
-    print(result.integration_description)
+    print(result.tool_descriptions)
     print(tool.model_dump())
-    integration_descriptions[tool.app_name] = result.integration_description
+    integration_descriptions[tool.app_name] = result.tool_descriptions
 
 print(integration_descriptions)
 
-with open("../data/tool_descriptions.json", "w") as f:
+with open("data/tool_descriptions.json", "w") as f:
     json.dump(integration_descriptions, f)

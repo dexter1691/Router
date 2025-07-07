@@ -52,8 +52,10 @@
   "Weather": [
     {"name": "get_weather", "description": "Get weather information for a location"}
   ], 
-  "Misc": [
-    {"name": "reply", "description": "reply to the user's message directly"},
+  "DirectMessage": [
+    {"name": "reply", "description": "reply to the user's message directly"}
+  ],
+  "Unachievable": [
     {"name": "unachievable_task", "description": "the task cannot be achieved with the tools available"}
   ]
 }
