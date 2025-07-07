@@ -1,0 +1,26 @@
+[
+    {
+        "query": "Play the Pink Panther theme song",
+        "decision": "integrations",
+        "tools": ["play_song"],
+        "integrations": ["Music"]
+    },
+    {
+        "query": "Schedule lunch tomorrow at 2pm with Celia; remind me the day before",
+        "decision": "integrations",
+        "tools": ["create_event", "create_reminder"],
+        "integrations": ["Calendar", "Reminders"]
+    },
+    {
+        "query": "Who was the fourth US president?",
+        "decision": "reply",
+        "tools": ["reply"],
+        "integrations": ["Misc"]
+    },
+    {
+        "query": "Turn on dark mode",
+        "decision": "unachievable",
+        "tools": ["unachievable_task"],
+        "integrations": ["Misc"]
+    }
+]

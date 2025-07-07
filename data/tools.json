@@ -1,0 +1,59 @@
+{
+  "Calendar": [
+    {"name": "create_event", "description": "Create a new event in the calendar"},
+    {"name": "update_event", "description": "Update an existing event in the calendar"},
+    {"name": "delete_event", "description": "Delete an event from the calendar"},
+    {"name": "search_events", "description": "Search for events in the calendar"}
+  ],
+  "Files": [
+    {"name": "create_file", "description": "Create a new file"},
+    {"name": "update_file", "description": "Update an existing file"},
+    {"name": "trash_file", "description": "Move a file to trash"}
+  ],
+  "FaceTime": [
+    {"name": "start_call", "description": "Start a FaceTime call"}
+  ],
+  "Mail": [
+    {"name": "send_email", "description": "Send an email"},
+    {"name": "search_inbox", "description": "Search emails in the inbox"}
+  ],
+  "Maps": [
+    {"name": "get_directions", "description": "Get directions to a location"},
+    {"name": "search_location", "description": "Search for a location on the map"}
+  ],
+  "Music": [
+    {"name": "play_song", "description": "Play a song from the music library"},
+    {"name": "search_library", "description": "Search the music library"}
+  ],
+  "Messages": [
+    {"name": "send_message", "description": "Send a message"},
+    {"name": "search_messages", "description": "Search through messages"}
+  ],
+  "Notes": [
+    {"name": "create_note", "description": "Create a new note"},
+    {"name": "update_note", "description": "Update an existing note"}
+  ],
+  "Reminders": [
+    {"name": "create_reminder", "description": "Create a new reminder"},
+    {"name": "update_reminder", "description": "Update an existing reminder"}
+  ],
+  "Slack": [
+    {"name": "send_message", "description": "Send a message to Slack"}
+  ],
+  "System": [
+    {"name": "capture_screenshot", "description": "Capture a screenshot of the screen"}
+  ],
+  "Stocks": [
+    {"name": "find_symbol", "description": "Find stock symbol information"}
+  ],
+  "WebBrowser": [
+    {"name": "open_url", "description": "Open a URL in the web browser"}
+  ],
+  "Weather": [
+    {"name": "get_weather", "description": "Get weather information for a location"}
+  ], 
+  "Misc": [
+    {"name": "reply", "description": "reply to the user's message directly"},
+    {"name": "unachievable_task", "description": "the task cannot be achieved with the tools available"}
+  ]
+}
