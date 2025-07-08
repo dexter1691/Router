@@ -1,4 +1,3 @@
-
 import json
 import os
 from pydantic import BaseModel
@@ -9,8 +8,17 @@ import random
 import argparse
 import multiprocessing as mp
 import uuid
+from tqdm import tqdm
+import glob
 
 load_dotenv()
+
+import math
+
+def ncr(n, r):
+    f = math.factorial
+    return f(n) // f(r) // f(n-r)
+
 
 client = OpenAI(
     # This is the default and can be omitted
@@ -68,7 +76,7 @@ Given the following {len(selected_tools_list)} set of tools:
 {tools_text}
 
 ## Output:
-Generate exactly 50 diverse and realistic user queries that someone might ask to accomplish tasks using all these tools.
+Generate exactly 20 diverse and realistic user queries that someone might ask to accomplish tasks using all these tools.
 
 ## Guidelines:
 1. Make the queries varied in complexity, style, and use case. Include both simple and complex scenarios.
@@ -114,13 +122,21 @@ Return your answer in this format and no other text:"""
         print(f"Error generating queries: {e}")
         return 
 
-def generate_queries(selected_tools: List[str], temperature: float = 0.5):
+def generate_queries(selected_tools_tuple: Tuple[str, List[str]], temperature: float = 0.5):
+    selected_tools = selected_tools_tuple[1]
+    uuid_id = selected_tools_tuple[0]
+    
     response = generate_diverse_queries_for_tools(selected_tools, temperature=0.5)
-    assert response is not None, "Response is None"
+    if response is None:
+        print(f"Response is None for {uuid_id}")
+        return
 
-    uuid_id = str(uuid.uuid4())
     if not os.path.exists(f"data/sft_data"):
         os.makedirs(f"data/sft_data")
+
+    if os.path.exists(f"data/sft_data/{uuid_id}.json"):
+        print(f"Skipping {uuid_id} because it already exists")
+        return
 
     with open(f"data/sft_data/{uuid_id}.json", "w") as f:
         responses = []
@@ -128,27 +144,63 @@ def generate_queries(selected_tools: List[str], temperature: float = 0.5):
             responses.append(query.model_dump())
         json.dump(responses, f)
     
-    print(f"Generated {len(response)} queries for {selected_tools} and saved to {uuid_id}.json")
+    # print(f"Generated {len(response)} queries for {selected_tools} and saved to {uuid_id}.json")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--no_of_tools", type=int, default=5)
-    parser.add_argument("--no_of_queries", type=int, default=2)
+    parser.add_argument("--no_of_tools", type=int, default=8)
+    parser.add_argument("--no_of_queries", type=int, default=4000)
     parser.add_argument("--temperature", type=float, default=0.5)
-    parser.add_argument("--no_of_processes", type=int, default=2)
+    parser.add_argument("--no_of_processes", type=int, default=128)
 
     args = parser.parse_args()
     no_of_tools = args.no_of_tools
     no_of_queries = args.no_of_queries
     
-    list_of_selected_tools = []
-    for k in range(1, no_of_tools + 1):
-        # Randomly select k tools
-        for i in range(no_of_queries):
-            selected_tools = random.sample(tools_flat_list, min(k, len(tools_flat_list)))
-            list_of_selected_tools.append(selected_tools)
+    # list_of_selected_tools = []
+    # for k in range(1, no_of_tools + 1):
+    #     # Randomly select k tools
+    #     no_of_combinations = ncr(len(tools_flat_list), k)
+    #     actual_no_of_queries = min(no_of_queries, no_of_combinations)
+    #     print(f"Generating {actual_no_of_queries} queries for {k} tools")
+    #     for i in range(actual_no_of_queries):
+    #         selected_tools = random.sample(tools_flat_list, k)
+    #         list_of_selected_tools.append(selected_tools)
 
+    # print(f"Total number of queries: {len(list_of_selected_tools)}")
+    
+    # with open("data/list_of_selected_tools.json", "w") as f:
+    #     map_of_selected_tools = {}
+    #     for selected_tools in list_of_selected_tools:
+    #         map_of_selected_tools[str(uuid.uuid4())] = selected_tools
+            
+    #     json.dump(map_of_selected_tools, f)
+    
+    with open("data/list_of_selected_tools.json", "r") as f:
+        map_of_selected_tools = json.load(f)
+    
+    print('Length of map_of_selected_tools', len(map_of_selected_tools))
+    
     pool = mp.Pool(processes=args.no_of_processes)
-    pool.map(generate_queries, list_of_selected_tools)
+    list_of_selected_tools = list(map_of_selected_tools.values())
+    uuid_ids = list(map_of_selected_tools.keys())
+
+    existing_files = glob.glob("data/sft_data/*.json")
+    existing_files = [os.path.basename(file) for file in existing_files]
+    existing_files = [file.split(".")[0] for file in existing_files]
+    existing_files = set(existing_files)
+    print('Length of existing_files', len(existing_files))
+    
+    remaining_list_of_selected_tools = []
+    for uuid_id in list(set(uuid_ids) - set(existing_files)):
+        remaining_list_of_selected_tools.append((uuid_id, map_of_selected_tools[uuid_id]))
+    
+    print('Length of remaining_list_of_selected_tools', len(remaining_list_of_selected_tools))
+
+    # Use tqdm to track progress
+    with tqdm(total=len(remaining_list_of_selected_tools), desc="Generating queries", unit="query") as pbar:
+        for _ in pool.imap(generate_queries, remaining_list_of_selected_tools):
+            pbar.update(1)
+    
     pool.close()
     pool.join()

@@ -8,3 +8,12 @@ wheels/
 
 # Virtual environments
 .venv
+data/positive_pairs_train_val_test/
+data/positive_pairs_train_val_test_1/
+data/data_df.pkl
+data/positive_pairs.json
+data/sft_data
+models/
+router/models/
+router/output/
+router/wandb/

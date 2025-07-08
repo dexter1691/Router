@@ -57,3 +57,8 @@ probably work well because we can cache the embeddings of the tool, and just run
 This should work too, but this has a problem that
 to generalize to new tools / fewer tools, we will need to create a bigger dataset that might be harder than sentence similarity. But this allows the model to "reason" in natural langauge which is a nice property to have.   
 
+
+
+# TODOs:
+- Generalization to new tools (train on subset. test on unseen subset.)
+- 
