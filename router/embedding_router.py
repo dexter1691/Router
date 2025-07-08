@@ -4,10 +4,10 @@ import numpy as np
 import ollama
 from router.utils import timer
 import json
-from router.evals import evals, recall_at_k
+from router.evals import Evals, recall_at_k
 import matplotlib.pyplot as plt
 import argparse
-
+from sentence_transformers import SentenceTransformer
 
 TOOLS_JSON_PATH = "data/tools.json"
 
@@ -25,6 +25,20 @@ def generate_embeddings(model_name: str, input_list: list[str]) -> np.ndarray:
             input=input_list
         )
         return np.array(embeddings.embeddings)
+
+def generate_embeddings_sentence_transformer(model: SentenceTransformer, input_list: list[str]) -> np.ndarray:
+    """ Generate embeddings for a list of strings using a sentence transformer model.
+    Args:
+        model_name: The name of the sentence transformer model to use.
+        input_list: A list of strings to generate embeddings for.
+    Returns:
+        A numpy array of embeddings.
+    """
+    with timer("embeddings"):
+        embeddings = model.encode(input_list)
+        # normalize embeddings
+        embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+        return np.array(embeddings)
 
 def return_top_k(tools_embeddings: np.ndarray, query_embeddings : np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
     """ Return the top k values of a dot product between a and b.
@@ -77,7 +91,7 @@ def plot_results(results_integrations, model_name, score_thresholds, top_k_value
     plt.savefig(f"data/figures/results_{model_name}.png")
 
 
-def generate_predictions(model_name: str):
+def generate_predictions(model_name: str, evals: Evals):
     """ Generate predictions for a list of queries using an ollama model.
     Args:
         model_name: The name of the ollama model to use.
@@ -137,8 +151,8 @@ def generate_predictions(model_name: str):
     return predicted_tools_list, predicted_integrations_list
 
 
-def main(model_name: str):
-    predicted_tools_list, predicted_integrations_list = generate_predictions(model_name)
+def main(model_name: str, evals: Evals):
+    predicted_tools_list, predicted_integrations_list = generate_predictions(model_name, evals)
     
     results_tools = []
     results_integrations = []
@@ -161,5 +175,7 @@ def main(model_name: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="mxbai-embed-large")
+    parser.add_argument("--evals_path", type=str, default="data/evals_test_500_v0.json")
     args = parser.parse_args()
-    main(args.model_name)
+    evals = Evals(args.evals_path)
+    main(args.model_name, evals)

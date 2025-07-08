@@ -25,7 +25,7 @@ client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
 
-TOOLS_JSON_PATH = "data/tools.json"
+TOOLS_JSON_PATH = "data/tools_v1.json"
 
 with open(TOOLS_JSON_PATH, "r") as f:
     tools = json.load(f)
@@ -40,11 +40,6 @@ for category, tools in tools.items():
         tools_to_integration_map[tool["name"]] = category
 
 print('Length of tools_flat_list', len(tools_flat_list))
-
-with open("data/tool_descriptions.json", "r") as f:
-    integration_descriptions = json.load(f)
-
-print('Length of integration_descriptions', len(integration_descriptions))
 
 class ResponseFormat(BaseModel):
     index: int
@@ -82,6 +77,10 @@ Generate exactly 20 diverse and realistic user queries that someone might ask to
 1. Make the queries varied in complexity, style, and use case. Include both simple and complex scenarios.
 2. Be creative and diverse in your responses. 
 3. You should make sure to use **all** the tools in the input.
+4. Scheduling a meeting / event can be done using the Calendar tool. But you should not use it to set a reminder.
+5. Sending a message should be used to send a message to another recipient. But "DirectMessage" should be used to reply to the user's message directly without calling any other tools.
+6. "Unachievable" should be used when the task cannot be accomplished using the current set of tools. When this tool is called, no other tool can be called. If you see
+unachievable in the input, you should create tasks that cannot be achieved and should not call any other tool.
 
 # Output Format:
 The response should be in the following format:
@@ -131,14 +130,14 @@ def generate_queries(selected_tools_tuple: Tuple[str, List[str]], temperature: f
         print(f"Response is None for {uuid_id}")
         return
 
-    if not os.path.exists(f"data/sft_data"):
-        os.makedirs(f"data/sft_data")
+    if not os.path.exists(f"data/sft_data_v1"):
+        os.makedirs(f"data/sft_data_v1")
 
-    if os.path.exists(f"data/sft_data/{uuid_id}.json"):
+    if os.path.exists(f"data/sft_data_v1/{uuid_id}.json"):
         print(f"Skipping {uuid_id} because it already exists")
         return
 
-    with open(f"data/sft_data/{uuid_id}.json", "w") as f:
+    with open(f"data/sft_data_v1/{uuid_id}.json", "w") as f:
         responses = []
         for query in response:
             responses.append(query.model_dump())
@@ -157,27 +156,30 @@ if __name__ == "__main__":
     no_of_tools = args.no_of_tools
     no_of_queries = args.no_of_queries
     
-    # list_of_selected_tools = []
-    # for k in range(1, no_of_tools + 1):
-    #     # Randomly select k tools
-    #     no_of_combinations = ncr(len(tools_flat_list), k)
-    #     actual_no_of_queries = min(no_of_queries, no_of_combinations)
-    #     print(f"Generating {actual_no_of_queries} queries for {k} tools")
-    #     for i in range(actual_no_of_queries):
-    #         selected_tools = random.sample(tools_flat_list, k)
-    #         list_of_selected_tools.append(selected_tools)
 
-    # print(f"Total number of queries: {len(list_of_selected_tools)}")
-    
-    # with open("data/list_of_selected_tools.json", "w") as f:
-    #     map_of_selected_tools = {}
-    #     for selected_tools in list_of_selected_tools:
-    #         map_of_selected_tools[str(uuid.uuid4())] = selected_tools
-            
-    #     json.dump(map_of_selected_tools, f)
-    
-    with open("data/list_of_selected_tools.json", "r") as f:
-        map_of_selected_tools = json.load(f)
+
+    if os.path.exists("data/list_of_selected_tools_v1.json"):
+        with open("data/list_of_selected_tools_v1.json", "r") as f:
+            map_of_selected_tools = json.load(f)
+    else:
+        list_of_selected_tools = []
+        for k in range(1, no_of_tools + 1):
+            # Randomly select k tools
+            no_of_combinations = ncr(len(tools_flat_list), k)
+            actual_no_of_queries = min(no_of_queries, no_of_combinations)
+            print(f"Generating {actual_no_of_queries} queries for {k} tools")
+            for i in range(actual_no_of_queries):
+                selected_tools = random.sample(tools_flat_list, k)
+                list_of_selected_tools.append(selected_tools)
+
+        print(f"Total number of queries: {len(list_of_selected_tools)}")
+        
+        with open("data/list_of_selected_tools.json", "w") as f:
+            map_of_selected_tools = {}
+            for selected_tools in list_of_selected_tools:
+                map_of_selected_tools[str(uuid.uuid4())] = selected_tools
+                
+            json.dump(map_of_selected_tools, f)
     
     print('Length of map_of_selected_tools', len(map_of_selected_tools))
     
@@ -185,7 +187,7 @@ if __name__ == "__main__":
     list_of_selected_tools = list(map_of_selected_tools.values())
     uuid_ids = list(map_of_selected_tools.keys())
 
-    existing_files = glob.glob("data/sft_data/*.json")
+    existing_files = glob.glob("data/sft_data_v1/*.json")
     existing_files = [os.path.basename(file) for file in existing_files]
     existing_files = [file.split(".")[0] for file in existing_files]
     existing_files = set(existing_files)
