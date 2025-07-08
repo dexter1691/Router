@@ -6,6 +6,7 @@ from datasets import load_dataset, load_from_disk
 from datasets import Dataset
 from sentence_transformers import (
     SentenceTransformer,
+    models,
     SentenceTransformerTrainer,
     SentenceTransformerTrainingArguments,
     SentenceTransformerModelCardData,
@@ -16,12 +17,17 @@ from sentence_transformers.evaluation import BinaryClassificationEvaluator
 import pdb
 
 # 1. Load a model to finetune with 2. (Optional) model card data
-model = SentenceTransformer(
-    "nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True
+model = models.Transformer(
+    "nomic-ai/nomic-embed-text-v1.5", model_args={'trust_remote_code': True}
 )
 
+pooling_model = models.Pooling(
+    model.get_word_embedding_dimension(), pooling_mode_mean_tokens=True
+)
+model = SentenceTransformer(modules=[model, pooling_model], trust_remote_code=True)
+
 # 3. Load a dataset to finetune on
-dataset = load_from_disk("/home/ubuntu/Router/data/positive_pairs_v1")
+dataset = load_from_disk("/home/ubuntu/Router/data/positive_pairs_train_val_test_1")
 train_dataset = dataset["train"]
 eval_dataset = dataset["val"]
 test_dataset = dataset["test"]
@@ -32,9 +38,9 @@ loss = MultipleNegativesRankingLoss(model)
 # 5. (Optional) Specify training arguments
 args = SentenceTransformerTrainingArguments(
     # Required parameter:
-    output_dir="/home/ubuntu/Router/models/nomic-embed-text-v1.5-dataset-v1",
+    output_dir="/home/ubuntu/Router/models/nomic-embed-text-v1.5-router",
     # Optional training parameters:
-    num_train_epochs=60,
+    num_train_epochs=30,
     per_device_train_batch_size=512,
     per_device_eval_batch_size=512,
     learning_rate=2e-5,
@@ -49,9 +55,8 @@ args = SentenceTransformerTrainingArguments(
     save_steps=500,
     save_total_limit=20,
     logging_steps=100,
-    run_name="nomic-embed-text-v1.5-dataset-v1",  # Will be used in W&B if `wandb` is installed
+    run_name="nomic-embed-text-v1.5-router",  # Will be used in W&B if `wandb` is installed
     report_to="wandb",
-    # find_unused_parameters=False,
     # dataloader_num_workers=0,
     # dataloader_drop_last=True
 )
@@ -77,7 +82,7 @@ trainer = SentenceTransformerTrainer(
 trainer.train()
 
 # 8. Save the trained model
-model.save_pretrained("/home/ubuntu/Router/models/nomic-embed-text-v1.5-dataset-v1/final")
+model.save_pretrained("/home/ubuntu/Router/models/nomic-embed-text-v1.5-router/final")
 
 # 9. (Optional) Push it to the Hugging Face Hub
 # model.push_to_hub("mpnet-base-all-nli-triplet")

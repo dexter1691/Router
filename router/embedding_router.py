@@ -56,30 +56,26 @@ def return_top_k(tools_embeddings: np.ndarray, query_embeddings : np.ndarray, k:
     return top_k_indices, top_k_scores
 
 
-def run_evals(evals, predicted_tools_list, predicted_integrations_list, top_k, score_threshold) -> tuple[float, float]:
-    recall_at_k_list = []
+def run_evals(evals, predicted_integrations_list, top_k, score_threshold) -> tuple[float, float]:
     recall_at_k_integrations_list = []
 
     for q_idx, eval_instance in enumerate(evals.get_data()):
         expected_integrations = eval_instance["integrations"]
-        expected_tools = eval_instance["tools"]
-        predictions = predicted_tools_list[q_idx]
-        r = recall_at_k(predictions, expected_tools, top_k, score_threshold)
-        
         prediction_integrations = predicted_integrations_list[q_idx]
+        if expected_integrations == []:
+            continue
         r_integrations = recall_at_k(prediction_integrations, expected_integrations, top_k, score_threshold)
-        recall_at_k_list.append(r)
         recall_at_k_integrations_list.append(r_integrations)
 
-    return np.mean(recall_at_k_list).item(), np.mean(recall_at_k_integrations_list).item()
+    return np.mean(recall_at_k_integrations_list).item()
 
 
-def plot_results(results_integrations, model_name, score_thresholds, top_k_values):
+def plot_results(results_integrations, model_name, score_thresholds, top_k_values, save_fig=True):
     plt.figure(figsize=(10, 6))
 
     for i, threshold in enumerate(score_thresholds):
         plt.plot(top_k_values, results_integrations[i], marker='o', label=f'Score threshold = {threshold}')
-
+    plt.ylim(0.6, 1)
     plt.xlabel('Top-k')
     plt.ylabel('Recall')
     plt.title('Integration Recall at Different Score Thresholds')
@@ -88,8 +84,30 @@ def plot_results(results_integrations, model_name, score_thresholds, top_k_value
     plt.xticks(top_k_values)
     plt.title(f"Integration Recall at Different Score Thresholds {model_name}")
     plt.tight_layout()
-    plt.savefig(f"data/figures/results_{model_name}.png")
+    if save_fig:
+        plt.savefig(f"data/figures/results_{model_name}.png")
+    else:
+        plt.show()
 
+def plot_results_comparisons(results_integrations_1, results_integrations_2, model_name_1, model_name_2, score_threshold, top_k_values, save_fig=True):
+    plt.figure(figsize=(10, 6))
+    if results_integrations_1 is not None:
+        plt.plot(top_k_values, results_integrations_1[0], marker='o', label=f'{model_name_1}', color='orange')
+    if results_integrations_2 is not None:
+        plt.plot(top_k_values, results_integrations_2[0], marker='o', label=f'{model_name_2}', color='blue')
+    plt.ylim(0.6, 1)
+    plt.xlabel('Top-k')
+    plt.ylabel('Recall')
+    plt.title('Recall')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.xticks(top_k_values)
+    plt.title(f"{model_name_1} vs {model_name_2} at thresold={score_threshold}")
+    plt.tight_layout()
+    if save_fig:
+        plt.savefig(f"data/figures/results_{model_name_1}_and_{model_name_2}.png")
+    else:
+        plt.show()
 
 def generate_predictions(model_name: str, evals: Evals):
     """ Generate predictions for a list of queries using an ollama model.
@@ -148,11 +166,43 @@ def generate_predictions(model_name: str, evals: Evals):
 
         print("-"*100)
 
-    return predicted_tools_list, predicted_integrations_list
+    return predicted_integrations_list
+
+def generate_predictions_sentence_transformer(model_name: str, evals: Evals, tool_descriptions_path: str = "data/tool_descriptions.json"):
+    tools_description_json = json.load(open(tool_descriptions_path))
+    tools_descriptions = list(tools_description_json.values())
+    integrations_name = list(tools_description_json.keys())
+
+    print(f'Length of tools_descriptions: {len(tools_descriptions)}')
+    print(f'Length of integrations_name: {len(integrations_name)}')
+    model = SentenceTransformer(model_name, trust_remote_code=True)
+    
+    tools_embeddings = generate_embeddings_sentence_transformer(
+        model=model,
+        input_list=tools_descriptions
+    )
+    predicted_integrations_list = []
+    for query in evals.get_queries():
+        query_embeddings = generate_embeddings_sentence_transformer(model, [query])
+        if len(query_embeddings.shape) == 1:
+            query_embeddings = query_embeddings.reshape(1, -1)
+
+        top_k_indices, top_k_scores = return_top_k(tools_embeddings, query_embeddings, len(tools_descriptions))
+        predicted_integrations = []
+        
+        for k in range(len(tools_descriptions) - 1, -1, -1):
+            integration_idx = top_k_indices[0, k]
+            integration_name = integrations_name[integration_idx]
+            # print(f"#{k}: Integration: {integration_name} Score: {top_k_scores[0, k]}")
+            predicted_integrations.append((integration_name, top_k_scores[0, k]))
+        # print("-"*100)
+        predicted_integrations_list.append(predicted_integrations)
+    
+    return predicted_integrations_list
 
 
 def main(model_name: str, evals: Evals):
-    predicted_tools_list, predicted_integrations_list = generate_predictions(model_name, evals)
+    predicted_integrations_list = generate_predictions(model_name, evals)
     
     results_tools = []
     results_integrations = []
@@ -161,13 +211,10 @@ def main(model_name: str, evals: Evals):
     top_k_values = [2, 5, 10, 20, 27]
     
     for score_threshold in score_thresholds:
-        result_for_threshold_tools = []
         result_for_threshold_integrations = []
         for top_k in top_k_values:
-            r_tools, r_integrations = run_evals(evals, predicted_tools_list, predicted_integrations_list, top_k=top_k, score_threshold=score_threshold)
-            result_for_threshold_tools.append(r_tools)
+            r_integrations = run_evals(evals, predicted_integrations_list, top_k=top_k, score_threshold=score_threshold)
             result_for_threshold_integrations.append(r_integrations)
-        results_tools.append(result_for_threshold_tools)
         results_integrations.append(result_for_threshold_integrations)
 
     plot_results(results_integrations, model_name, score_thresholds, top_k_values)

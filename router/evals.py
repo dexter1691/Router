@@ -27,5 +27,3 @@ class Evals:
     
     def get_data(self):
         return self.evals
-
-evals = Evals("data/evals.json")
