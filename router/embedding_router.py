@@ -34,7 +34,7 @@ def generate_embeddings_sentence_transformer(model: SentenceTransformer, input_l
     Returns:
         A numpy array of embeddings.
     """
-    with timer("embeddings"):
+    with timer("embeddings", "Took {elapsed_ms:.2f}ms to generate embeddings"):
         embeddings = model.encode(input_list)
         # normalize embeddings
         embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)

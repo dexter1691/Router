@@ -50,7 +50,7 @@ class Timer:
 
 
 @contextmanager
-def timer(name: Optional[str] = None):
+def timer(name: Optional[str] = None, log_statement:str = "Execution time: {elapsed_ms:.2f}ms"):
     """
     Context manager for timing code execution.
     
@@ -67,10 +67,7 @@ def timer(name: Optional[str] = None):
         yield
     finally:
         elapsed_ms = (time.perf_counter() - start_time) * 1000
-        if name:
-            print(f"{name}: {elapsed_ms:.2f}ms")
-        else:
-            print(f"Execution time: {elapsed_ms:.2f}ms")
+        print(log_statement.format(elapsed_ms=elapsed_ms))
 
 
 def time_function(func: Optional[Callable] = None, name: Optional[str] = None):
